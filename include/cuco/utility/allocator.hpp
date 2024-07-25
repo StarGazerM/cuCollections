@@ -29,7 +29,11 @@ class cuda_allocator {
  public:
   using value_type = T;  ///< Allocator's value type
 
-  cuda_allocator() = default;
+  cudaStream_t stream;  ///< CUDA stream to use for (de)allocations
+
+  cuda_allocator() {
+    CUCO_CUDA_TRY(cudaStreamCreate(&stream));
+  }
 
   /**
    * @brief Copy constructor.
@@ -57,7 +61,12 @@ class cuda_allocator {
    *
    * @param p Pointer to memory to deallocate
    */
-  void deallocate(value_type* p, std::size_t) { CUCO_CUDA_TRY(cudaFree(p)); }
+  void deallocate(value_type* p, std::size_t) {
+    // CUCO_CUDA_TRY(cudaFree(p));
+    CUCO_CUDA_TRY(cudaFreeAsync(p, stream));
+  }
+
+  ~cuda_allocator() { CUCO_CUDA_TRY(cudaStreamDestroy(stream)); }
 };
 
 /**
